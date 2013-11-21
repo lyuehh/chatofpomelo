@@ -19,30 +19,56 @@ var handler = Handler.prototype;
  *
  */
 handler.send = function(msg, session, next) {
-	var rid = session.get('rid');
-	var username = session.uid.split('*')[0];
+	console.log('[server][chatHandler][send] msg: ' + JSON.stringify(msg));
+	var self = this;
+	var rid = session.get('rid'); // 用户的域 example.com
+	var username = session.uid.split('@')[0]; // uid: user2@example.com
 	var channelService = this.app.get('channelService');
+	var type = msg.type; // private, group, domain 3种
+	var cid = msg.cid;
 	var param = {
 		route: 'onChat',
-		msg: msg.content,
-		from: username,
-		target: msg.target
+		message: msg.message,
+		from: msg.from,
+		to: msg.to
 	};
-	channel = channelService.getChannel(rid, false);
-
-	//the target is all users
-	if(msg.target == '*') {
+	console.log('[server][chatHandler][serverId] :' + session.get('sid'));
+	var channel;
+	if (msg.type === 'private') {
+		channel = channelService.getChannel(cid, false) || channelService.getChannel(msg.to + '_' + msg.from, false);
+		if (!channel) {
+			channel = channelService.getChannel(msg.to + '_' + msg.from, true);
+			channel.add(msg.from + '@' + rid, session.get('sid'));
+			channel.add(msg.to + '@' + rid, session.get('sid'));
+		}
+	} else if (msg.type === 'group') {
+		channel = channelService.getChannel(cid, false); // group chat
+		if (!channel) {
+			channel = channelService.getChannel(cid, true); // group chat
+		}
+	} else if (msg.type === 'domain') {
+		channel = channelService.getChannel(cid, false); // domain chat
+		if (!channel) {
+			channel = channelService.getChannel(cid, true); // domain chat
+		}
+	}
+	//var channel = channelService.getChannel(rid, false); // domain channel
+	channel.pushMessage(param);
+/*
+	//the to is all users
+	if(msg.to == '*') {
 		channel.pushMessage(param);
 	}
-	//the target is specific user
+	//the to is specific user
 	else {
-		var tuid = msg.target + '*' + rid;
+		var tuid = msg.to + '@' + rid;
 		var tsid = channel.getMember(tuid)['sid'];
 		channelService.pushMessageByUids(param, [{
 			uid: tuid,
 			sid: tsid
 		}]);
 	}
+	*/
 	next(null, {
 		route: msg.route
 	});

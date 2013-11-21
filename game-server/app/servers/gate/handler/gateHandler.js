@@ -20,6 +20,8 @@ var handler = Handler.prototype;
  */
 handler.queryEntry = function(msg, session, next) {
 	var uid = msg.uid;
+	console.log("[server][gateHandler][queryEntry] uid: " + uid);
+
 	if(!uid) {
 		next(null, {
 			code: 500
