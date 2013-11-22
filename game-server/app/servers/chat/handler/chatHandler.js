@@ -30,22 +30,33 @@ handler.send = function(msg, session, next) {
 		route: 'onChat',
 		message: msg.message,
 		from: msg.from,
-		to: msg.to
+		to: msg.to,
+		type: type
 	};
+	var userFrom = msg.from + '@' + rid;
+	var userTo = msg.to + '@' + rid;
+
 	console.log('[server][chatHandler][serverId] :' + session.get('sid'));
 	var channel;
 	if (msg.type === 'private') {
 		channel = channelService.getChannel(cid, false) || channelService.getChannel(msg.to + '_' + msg.from, false);
 		if (!channel) {
 			channel = channelService.getChannel(msg.to + '_' + msg.from, true);
-			channel.add(msg.from + '@' + rid, session.get('sid'));
-			channel.add(msg.to + '@' + rid, session.get('sid'));
+			channel.add(userFrom, session.get('sid'));
+			channel.add(userTo, session.get('sid'));
 		}
 	} else if (msg.type === 'group') {
 		channel = channelService.getChannel(cid, false); // group chat
 		if (!channel) {
 			channel = channelService.getChannel(cid, true); // group chat
+			channel.add(userFrom, session.get('sid'));
+		} else {
+			console.log('[server][chatHandler][member] :' + JSON.stringify(channel.getMember(msg.from + '@' + rid)));
+			if (!channel.getMember(msg.from + '@' + rid)) {
+				channel.add(userFrom, session.get('sid'));
+			}
 		}
+
 	} else if (msg.type === 'domain') {
 		channel = channelService.getChannel(cid, false); // domain chat
 		if (!channel) {
